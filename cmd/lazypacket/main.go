@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"lazy-packet/internal/ui"
+	"os"
+
+	tea "charm.land/bubbletea/v2"
+)
 
 func main() {
-	fmt.Println("lazy-packet starting...")
+	p := tea.NewProgram(ui.InitModel())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error running program: %v\n", err)
+		os.Exit(1)
+	}
 }
