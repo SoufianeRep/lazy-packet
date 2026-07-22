@@ -1,0 +1,3 @@
+module lazy-packet
+
+go 1.26.5
