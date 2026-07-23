@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -37,9 +35,4 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-func (m Model) View() tea.View {
-	placeholder := fmt.Sprintf("%d x %d", m.width, m.height)
-	return tea.NewView(placeholder)
 }
