@@ -47,14 +47,50 @@ only `flow`'s plain data, keeping the Elm-architecture loop clean.
 None of this is implemented yet. `internal/ui/app.go` is currently empty
 (`package ui`); `cmd/lazypacket/main.go` just prints a startup string.
 
-## Current status
+## Current status (2026-07-24)
 
-- Repo initialized, no commits yet.
-- Bare skeleton only: `go.mod`, `cmd/lazypacket/main.go` (stub), `internal/ui/app.go`
-  (empty).
-- No dependencies added yet.
-- Next step in progress: sketching the actual window/pane layout (sidebar of
-  connections? main detail pane? status bar?) before writing any UI code.
+- `internal/ui`: basic Model/Update/View skeleton and main program wiring exist
+  (bubbletea v2), committed.
+- `internal/protocol/ethernet.go`: in progress.
+  - Types defined: `EthernetFrame` (DstMAC, SrcMAC, VLAN *VLANTag, EtherType),
+    `VLANTag` (TPID + embedded `TCI`), `TCI` (PCP, DEI, VID) — handles optional
+    802.1Q tagging between src MAC and EtherType.
+  - `ParseEthernetFrame(data []byte) (*EthernetFrame, []byte, error)` — signature
+    decided, body not yet implemented (still a stub returning a zero struct).
+  - `sample.pcap` captured and committed (own traffic) to use as a parsing fixture
+    source — individual packet fixtures not yet extracted as Go `[]byte` literals.
+- Open/deferred decisions (revisit later, not blocking current work):
+  - `net.HardwareAddr` vs. plain `[6]byte` for MAC fields — currently `[6]byte`,
+    considered but not changed.
+  - A `Contents []byte` (raw header bytes) field per layer, similar to gopacket's
+    `BaseLayer` — wanted for a future "click a layer in the tree, highlight its
+    bytes in the hex dump" UI feature. Not added yet; not needed until the UI
+    hex-dump work starts.
+  - Method-receiver + interface-based decode architecture (gopacket's
+    `DecodeFromBytes` / `DecodingLayer` pattern) — deliberately deferred. Current
+    free-function style (`ParseX(data) -> (*X, []byte, error)`) is simpler to
+    test and is fine for now; converting later is a low-risk mechanical refactor
+    since the actual byte-parsing logic doesn't change, only the packaging. The
+    full interface-based polymorphic dispatch is its own separate future learning
+    goal, not part of this pass.
+  - Packet capture library still undecided (gopacket/pcap likely, unconfirmed).
+
+## Where to pick up next time
+
+Working through the todo list for the "hand-rolled protocol parsing" phase, in order:
+
+1. Extract 2-3 real packets from `sample.pcap` as raw hex byte fixtures (one TCP,
+   one UDP; cross-check each against Wireshark's decode as ground truth).
+2. Finish `ParseEthernetFrame`'s body (currently a stub) — including the VLAN-tag
+   peek/skip logic.
+3. IPv4 header parsing (`internal/protocol/ipv4.go`).
+4. TCP header parsing (`internal/protocol/tcp.go`).
+5. UDP header parsing (`internal/protocol/udp.go`).
+6. Unit tests for all of the above against the fixtures from step 1.
+7. A throwaway harness that runs one fixture through the full Ethernet → IPv4 →
+   TCP/UDP chain and prints every field, checked by eye against Wireshark. This is
+   the finish line for this phase — `internal/capture` and the UI don't get
+   touched until this works end to end.
 
 ## Working style for this project
 
@@ -62,8 +98,12 @@ None of this is implemented yet. `internal/ui/app.go` is currently empty
   flow) before scaffolding files or installing dependencies.
 - Confirm exact library major versions before adding them (see the v1/v2 bubbletea
   note above) — don't assume "latest" or the most common choice.
-- Let parsing/Elm-architecture logic be written collaboratively rather than handed
-  over pre-built, since understanding it is the goal.
+- The user writes all code themselves (parsing logic, Elm-architecture logic,
+  everything). Explicit correction (2026-07-24): "I don't want you to code
+  anything, I want to write the code myself." Claude's role is explaining
+  concepts, answering design questions, and reviewing/commenting code on request
+  — not authoring it, unless a patch is explicitly requested (e.g. adding doc
+  comments to an existing file).
 
 ## UI Specification 
 ┌──────────────────────────────────────────────────────────────────────────┐
