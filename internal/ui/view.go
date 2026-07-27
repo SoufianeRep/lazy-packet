@@ -8,6 +8,7 @@ import (
 const (
 	headerHeight = 4
 	FooterHeight = 1
+	borderSize   = 2
 )
 
 func (m Model) renderHeader() string {
@@ -19,13 +20,19 @@ func (m Model) renderHeader() string {
 		Render("Header Box")
 }
 
+func (m Model) mainPanelHeight() int {
+	header := m.renderHeader()
+	footer := m.renderCommandFooter()
+	return m.height - lipgloss.Height(header) - lipgloss.Height(footer)
+}
+
 func (m Model) renderMainPanel(height int) string {
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		Width(m.width / 2).
 		Height(height).
-		Render("Hello this is a box")
+		Render(m.packets.View())
 }
 
 func (m Model) renderDetailsPanel(height int) string {
@@ -45,10 +52,10 @@ func (m Model) View() tea.View {
 	header := m.renderHeader()
 	footer := m.renderCommandFooter()
 
-	usedHeight := lipgloss.Height(header) + lipgloss.Height(footer)
+	height := m.mainPanelHeight()
 
-	packetsPanel := m.renderMainPanel(m.height - usedHeight)
-	detailsPanel := m.renderDetailsPanel(m.height - usedHeight)
+	packetsPanel := m.renderMainPanel(height)
+	detailsPanel := m.renderDetailsPanel(height)
 	mainPanel := lipgloss.JoinHorizontal(lipgloss.Top, packetsPanel, detailsPanel)
 
 	layout := lipgloss.JoinVertical(lipgloss.Top, header, mainPanel, footer)

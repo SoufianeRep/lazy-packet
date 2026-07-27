@@ -1,9 +1,14 @@
-package protocol
+package layers
 
 import (
+	"encoding/binary"
 	"errors"
 	"net"
+
+	lazypacket "lazypacket"
 )
+
+const hdrLen = 14
 
 type TCI struct {
 	PCP uint8  // Priority Code Point (3 bits)
@@ -15,29 +20,29 @@ type VLANTag struct {
 	TCI         // Tag Control Information
 }
 type Ethernet struct {
-	BaseLayer
+	lazypacket.BaseLayer
 
 	DstMAC    net.HardwareAddr // destination MAC address
 	SrcMAC    net.HardwareAddr // source MAC address
 	VLAN      *VLANTag         // optional 802.1Q tag; nil if the frame is untagged
-	EtherType uint16           // payload protocol, e.g. 0x0800 for IPv4 (read after any VLAN tag)
+	EtherType EthernetType     // payload protocol, e.g. 0x0800 for IPv4 (read after any VLAN tag)
 }
 
-func DecodeFromBytes(data []byte) (*Ethernet, []byte, error) {
-	var err error
-	if len(data) < 14 {
-		err = errors.New("ethernet frame too small")
+func (eth *Ethernet) DecodeFromBytes(data []byte) error {
+	if len(data) < hdrLen {
+		return errors.New("ethernet frame too small")
 	}
 
-	eth := &Ethernet{}
 	eth.DstMAC = net.HardwareAddr(data[0:6])
 	eth.SrcMAC = net.HardwareAddr(data[6:12])
-	eth.EtherType = uint16(data[12])<<8 | uint16(data[13])
+
+	//uint16(data[12])<<8 | uint16(data[13])
+	eth.EtherType = EthernetType(binary.BigEndian.Uint16(data[12:14]))
 	if eth.EtherType < 0x0600 {
 		// This is a length field, not an EtherType.  We need to check for a VLAN tag.
 	}
+	eth.Contents = data[:hdrLen]
+	eth.Payload = data[hdrLen:]
 
-	eth.BaseLayer = BaseLayer{Contents: data[:14], Payload: data[14:]}
-
-	return eth, data, err
+	return nil
 }
