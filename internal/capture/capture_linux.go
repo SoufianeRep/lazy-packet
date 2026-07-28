@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"syscall"
+	"time"
 )
 
 type Handle struct {
@@ -45,14 +46,20 @@ func (h *Handle) Close() error {
 	return syscall.Close(h.fd)
 }
 
-func (h *Handle) ReadFrame() ([]byte, error) {
+type Frame struct {
+	Data      []byte
+	Timestamp time.Time
+}
+
+func (h *Handle) ReadFrame() (Frame, error) {
 	buf := make([]byte, 65536)
 	n, _, err := syscall.Recvfrom(h.fd, buf, 0)
 	if err != nil {
-		return nil, fmt.Errorf("read frame: %w", err)
+		return Frame{}, fmt.Errorf("read frame: %w", err)
 	}
+
 	frame := make([]byte, n)
 	copy(frame, buf[:n])
 
-	return frame, nil
+	return Frame{Data: frame, Timestamp: time.Now()}, nil
 }

@@ -23,20 +23,20 @@ func (m Model) renderHeader() string {
 func (m Model) mainPanelHeight() int {
 	header := m.renderHeader()
 	footer := m.renderCommandFooter()
-	return m.height - lipgloss.Height(header) - lipgloss.Height(footer)
+	return m.height - lipgloss.Height(header) - lipgloss.Height(footer) - borderSize
 }
 
 func (m Model) renderMainPanel(height int) string {
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		Width(m.width / 2).
+		Width(m.width).
 		Height(height).
-		Render(m.packets.View())
+		Render(m.packetList.View())
 }
 
 func (m Model) renderDetailsPanel(height int) string {
-	return lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).Height(height).Width(m.width / 2).Render("Details Box")
+	return lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).Height(height).Width(m.width).Render("Details Box")
 }
 
 func (m Model) renderCommandFooter() string {
@@ -54,11 +54,10 @@ func (m Model) View() tea.View {
 
 	height := m.mainPanelHeight()
 
-	packetsPanel := m.renderMainPanel(height)
-	detailsPanel := m.renderDetailsPanel(height)
-	mainPanel := lipgloss.JoinHorizontal(lipgloss.Top, packetsPanel, detailsPanel)
+	packetsPanel := m.renderMainPanel(height / 2)
+	detailsPanel := m.renderDetailsPanel(height / 2)
 
-	layout := lipgloss.JoinVertical(lipgloss.Top, header, mainPanel, footer)
+	layout := lipgloss.JoinVertical(lipgloss.Top, header, packetsPanel, detailsPanel, footer)
 
 	view := tea.NewView(layout)
 	view.AltScreen = true

@@ -31,7 +31,7 @@ func main() {
 				break
 			}
 
-			p.Send(ui.FrameMsg{Data: frame})
+			p.Send(ui.FrameMsg{Frame: frame})
 		}
 	}()
 

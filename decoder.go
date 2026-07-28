@@ -1,7 +1,7 @@
 package lazypacket
 
 type Decoder interface {
-	Decode(data []byte, p PacketBuilder) error
+	DecodeFromBytes(data []byte, p PacketBuilder) error
 }
 
 type PacketBuilder interface {
@@ -13,7 +13,7 @@ type PacketBuilder interface {
 
 	SetNetworkLayer(l Layer)
 
-	setTransportLayer(l Layer)
+	SetTransportLayer(l Layer)
 
 	NextDecoder(next Decoder, data []byte) error
 }

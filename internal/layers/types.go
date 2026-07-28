@@ -5,6 +5,7 @@ type EthernetType uint16
 const (
 	EthernetTypeIPv4 EthernetType = 0x0800
 	EthernetTypeIPv6 EthernetType = 0x86dd
+	EthernetTypeARP  EthernetType = 0x0806
 )
 
 type IPProtocol uint8
