@@ -88,7 +88,6 @@ func (ip *IPv4) DecodeFromBytes(data []byte, p lp.PacketBuilder) error {
 	ip.TTL = data[8]
 	ip.Protocol = IPProtocol(data[9])
 
-	// Optional TODO: verify checksum, outside of the scope of the sniffer
 	ip.Checksum = binary.BigEndian.Uint16(data[10:12]) // uint16(data[10])<<8 | uint16(data[11])
 
 	ip.SrcAddr = data[12:16]
