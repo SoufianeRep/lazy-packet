@@ -14,3 +14,14 @@ const (
 	IPProtocolTCP IPProtocol = 6
 	IPProtocolUDP IPProtocol = 17
 )
+
+func (p IPProtocol) String() string {
+	switch p {
+	case IPProtocolUDP:
+		return "UDP"
+	case IPProtocolTCP:
+		return "TCP"
+	default:
+		return "Unknown"
+	}
+}

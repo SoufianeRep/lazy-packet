@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	lp "lazypacket"
 	"lazypacket/internal/capture"
+	"lazypacket/internal/layers"
 	"lazypacket/internal/ui"
 	"os"
 
@@ -25,13 +27,14 @@ func main() {
 	p := tea.NewProgram(ui.InitModel())
 	go func() {
 		for {
-			frame, err := h.ReadFrame()
+			data, ts, err := h.ReadFrame()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "read failed: %v\n", err)
 				break
 			}
+			packet := lp.NewPacket(data, &layers.Ethernet{})
 
-			p.Send(ui.FrameMsg{Frame: frame})
+			p.Send(ui.FrameMsg{Packet: packet, TimeStamp: ts})
 		}
 	}()
 

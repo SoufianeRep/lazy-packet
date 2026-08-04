@@ -77,28 +77,23 @@ func (h *Handle) Close() error {
 	return syscall.Close(h.fd)
 }
 
-type Frame struct {
-	Data      []byte
-	Timestamp time.Time
-}
-
 func bpfWordAlign(n int) int {
 	const align = syscall.BPF_ALIGNMENT
 	return (n + align - 1) &^ (align - 1)
 }
 
-func (h *Handle) ReadFrame() (Frame, error) {
+func (h *Handle) ReadFrame() ([]byte, time.Time, error) {
 	if len(h.rest) == 0 {
 		n, err := syscall.Read(h.fd, h.buf)
 		if err != nil {
-			return Frame{}, fmt.Errorf("read frame: %w", err)
+			return nil, time.Time{}, fmt.Errorf("read frame: %w", err)
 		}
 		h.rest = h.buf[:n]
 	}
 
 	if len(h.rest) < syscall.SizeofBpfHdr {
 		h.rest = nil
-		return Frame{}, fmt.Errorf("read frame: short bpf header")
+		return nil, time.Time{}, fmt.Errorf("read frame: short bpf header")
 	}
 
 	hdr := (*syscall.BpfHdr)(unsafe.Pointer(&h.rest[0]))
@@ -107,7 +102,7 @@ func (h *Handle) ReadFrame() (Frame, error) {
 
 	if hdrLen+capLen > len(h.rest) {
 		h.rest = nil
-		return Frame{}, fmt.Errorf("read frame: truncated bpf packet")
+		return nil, time.Time{}, fmt.Errorf("read frame: truncated bpf packet")
 	}
 
 	data := make([]byte, capLen)
@@ -121,5 +116,5 @@ func (h *Handle) ReadFrame() (Frame, error) {
 		h.rest = h.rest[advance:]
 	}
 
-	return Frame{Data: data, Timestamp: ts}, nil
+	return data, ts, nil
 }

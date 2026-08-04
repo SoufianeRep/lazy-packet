@@ -105,6 +105,7 @@ func (ip *IPv4) DecodeFromBytes(data []byte, p lp.PacketBuilder) error {
 	ip.Payload = data[ip.IHL*4:]
 
 	p.AddLayer(ip)
+	p.SetNetworkLayer(ip)
 
 	switch ip.Protocol {
 	case IPProtocolTCP:

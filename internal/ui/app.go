@@ -1,20 +1,22 @@
 package ui
 
 import (
-	"fmt"
 	lp "lazypacket"
-	"lazypacket/internal/capture"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 )
 
-type Entry struct {
-	Frame  capture.Frame
-	Packet lp.Packet
+type FrameMsg struct {
+	Packet    *lp.Packet
+	TimeStamp time.Time
 }
-
+type Entry struct {
+	Packet    *lp.Packet
+	TimeStamp time.Time
+}
 type Model struct {
 	width  int
 	height int
@@ -23,10 +25,6 @@ type Model struct {
 	detailView viewport.Model
 	packets    []Entry
 	selected   int
-}
-
-type FrameMsg struct {
-	Frame capture.Frame
 }
 
 func InitModel() Model {
@@ -41,7 +39,7 @@ func InitModel() Model {
 func packetLines(packets []Entry) string {
 	lines := make([]string, len(packets))
 	for i, e := range packets {
-		lines[i] = fmt.Sprintf("#%d - %s - %d bytes", i, e.Frame.Timestamp.Format("15:04:05"), len(e.Frame.Data))
+		lines = append(lines, formatPacket(i+1, e, e.TimeStamp.Sub(packets[0].TimeStamp)))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -79,7 +77,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case FrameMsg:
-		m.packets = append(m.packets, Entry{Frame: msg.Frame})
+		m.packets = append(m.packets, Entry{Packet: msg.Packet, TimeStamp: msg.TimeStamp})
 
 		wasAtBottom := m.packetList.AtBottom()
 		m.packetList.SetContent(packetLines(m.packets))

@@ -51,15 +51,15 @@ type Frame struct {
 	Timestamp time.Time
 }
 
-func (h *Handle) ReadFrame() (Frame, error) {
+func (h *Handle) ReadFrame() ([]byte, time.Time, error) {
 	buf := make([]byte, 65536)
 	n, _, err := syscall.Recvfrom(h.fd, buf, 0)
 	if err != nil {
-		return Frame{}, fmt.Errorf("read frame: %w", err)
+		return nil, time.Time{}, fmt.Errorf("read frame: %w", err)
 	}
 
 	frame := make([]byte, n)
 	copy(frame, buf[:n])
 
-	return Frame{Data: frame, Timestamp: time.Now()}, nil
+	return frame, time.Now(), nil
 }

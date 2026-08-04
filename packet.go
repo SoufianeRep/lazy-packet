@@ -13,6 +13,20 @@ type Packet struct {
 	err       error
 }
 
+func NewPacket(data []byte, first Decoder) *Packet {
+	p := &Packet{
+		data: data,
+	}
+
+	p.err = first.DecodeFromBytes(data, p)
+
+	return p
+}
+
+func (p *Packet) Layers() []Layer {
+	return p.layers
+}
+
 func (p *Packet) AddLayer(l Layer) {
 	p.layers = append(p.layers, l)
 }
@@ -41,4 +55,8 @@ func (p *Packet) SetTransportLayer(l Layer) {
 
 func (p *Packet) NextDecoder(next Decoder, data []byte) error {
 	return next.DecodeFromBytes(data, p)
+}
+
+func (p *Packet) NetworkLayer() Layer {
+	return p.network
 }
