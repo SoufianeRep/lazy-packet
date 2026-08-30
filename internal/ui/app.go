@@ -39,7 +39,7 @@ func InitModel() Model {
 func packetLines(packets []Entry) string {
 	lines := make([]string, len(packets))
 	for i, e := range packets {
-		lines = append(lines, formatPacket(i+1, e, e.TimeStamp.Sub(packets[0].TimeStamp)))
+		lines[i] = formatPacket(i+1, e, e.TimeStamp.Sub(packets[0].TimeStamp))
 	}
 	return strings.Join(lines, "\n")
 }

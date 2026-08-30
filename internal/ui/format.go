@@ -15,5 +15,5 @@ func formatPacket(i int, packet Entry, elapsed time.Duration) string {
 	dstAddr := ip.DstAddr.String()
 	protocol := ip.Protocol.String()
 
-	return fmt.Sprintf("#%d\t%.6f\t%s\t%s\t%s bytes", i, elapsed.Seconds(), srcAddr, dstAddr, protocol)
+	return fmt.Sprintf("#%-6d %-10.5f %-16s %-16s %-6s", i, elapsed.Seconds(), srcAddr, dstAddr, protocol)
 }
