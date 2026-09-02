@@ -57,6 +57,14 @@ func (p *Packet) NextDecoder(next Decoder, data []byte) error {
 	return next.DecodeFromBytes(data, p)
 }
 
+func (p *Packet) LinkLayer() Layer {
+	return p.link
+}
+
 func (p *Packet) NetworkLayer() Layer {
 	return p.network
+}
+
+func (p *Packet) TransportLayer() Layer {
+	return p.transport
 }

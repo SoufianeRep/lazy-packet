@@ -44,6 +44,8 @@ type Model struct {
 	handle     *capture.Handle
 	framesChan chan FrameMsg
 
+	paused bool
+
 	packetList viewport.Model
 	detailView viewport.Model
 	packets    []Entry
@@ -149,6 +151,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "i":
 				m.screenMode = Interfaces
+			case "p":
+				m.paused = !m.paused
 			}
 		case Interfaces:
 			switch msg.String() {
@@ -172,7 +176,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, handFrame(m.framesChan)
 
 	case FrameMsg:
-		m.packets = append(m.packets, Entry{Packet: msg.Packet, TimeStamp: msg.TimeStamp})
+		if !m.paused {
+			m.packets = append(m.packets, Entry{Packet: msg.Packet, TimeStamp: msg.TimeStamp})
+		}
 
 		wasAtBottom := m.packetList.AtBottom()
 		m.packetList.SetContent(packetLines(m.packets))

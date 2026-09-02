@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
+	"strings"
 
 	lp "lazypacket"
 )
@@ -63,7 +64,7 @@ const (
 	TCPOptionKindWindowScale   TCPOptionKind = 3
 	TCPOptionKindSACKPermitted TCPOptionKind = 4
 	TCPOptionKindSACK          TCPOptionKind = 5
-	TCPOptionKindTimestamp     TCPOptionKind = 8
+	TCPOptionKindTimestamps    TCPOptionKind = 8
 )
 
 func (tok TCPOptionKind) String() string {
@@ -80,7 +81,7 @@ func (tok TCPOptionKind) String() string {
 		return "SACKPermitted"
 	case TCPOptionKindSACK:
 		return "SACK"
-	case TCPOptionKindTimestamp:
+	case TCPOptionKindTimestamps:
 		return "Timestamp"
 	default:
 		return "Unsupported"
@@ -181,5 +182,62 @@ OPTIONS:
 		// this is incomplete but should be sufficient for now
 	}
 
+	p.AddLayer(t)
+	p.SetTransportLayer(t)
+
 	return nil
+}
+
+func (t *TCP) Summary() string {
+	var summary strings.Builder
+	summary.WriteString(fmt.Sprintf("%d -> %d  ", t.SrcPort, t.DstPort))
+
+	flags := make([]string, 0, 8)
+	if t.FIN {
+		flags = append(flags, "FIN")
+	}
+
+	if t.SYN {
+		flags = append(flags, "SYN")
+	}
+
+	if t.RST {
+		flags = append(flags, "RST")
+	}
+
+	if t.PSH {
+		flags = append(flags, "PSH")
+	}
+
+	if t.ACK {
+		flags = append(flags, "ACK")
+	}
+
+	if t.URG {
+		flags = append(flags, "URG")
+	}
+
+	if t.ECE {
+		flags = append(flags, "ECE")
+	}
+
+	if t.CWR {
+		flags = append(flags, "CWR")
+	}
+
+	summary.WriteString(fmt.Sprintf("[%s] ", strings.Join(flags, ", ")))
+	summary.WriteString(fmt.Sprintf("Seq=%d ", t.SeqNum))
+	summary.WriteString(fmt.Sprintf("Ack=%d ", t.AckNum))
+	summary.WriteString(fmt.Sprintf("Win=%d ", t.Window))
+	summary.WriteString(fmt.Sprintf("Len=%d ", len(t.Payload)))
+
+	for _, opt := range t.Options {
+		if opt.OptionType == TCPOptionKindTimestamps && len(opt.OptionData) == 8 {
+			summary.WriteString(fmt.Sprintf(" TSval=%d TSecr=%d",
+				binary.BigEndian.Uint32(opt.OptionData[:4]),
+				binary.BigEndian.Uint32(opt.OptionData[4:8])))
+			break
+		}
+	}
+	return summary.String()
 }
