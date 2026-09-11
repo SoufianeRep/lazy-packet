@@ -19,6 +19,14 @@ const (
 	Dashboard
 )
 
+type FocusedPanel int
+
+const (
+	NoFocus FocusedPanel = iota
+	PacketsFocus
+	DetailsFocus
+)
+
 type CaptureMsg struct {
 	Handle     *capture.Handle
 	FramesChan chan FrameMsg
@@ -41,15 +49,18 @@ type Model struct {
 	ifaces      []net.Interface
 	ifaceCursor int
 
-	handle     *capture.Handle
+	handle *capture.Handle
+
 	framesChan chan FrameMsg
+	paused     bool
 
-	paused bool
-
-	packetList viewport.Model
-	detailView viewport.Model
 	packets    []Entry
+	packetList viewport.Model
 	selected   int
+
+	detailView viewport.Model
+
+	focus FocusedPanel
 }
 
 func InitModel() Model {
@@ -64,13 +75,19 @@ func InitModel() Model {
 		ifaces:     ifaces,
 		packetList: newViewport(),
 		detailView: newViewport(),
+		selected:   -1,
+		focus:      NoFocus,
 	}
 }
 
-func packetLines(packets []Entry) string {
+func packetLines(packets []Entry, selected int) string {
 	lines := make([]string, len(packets))
 	for i, e := range packets {
-		lines[i] = formatPacket(i+1, e, e.TimeStamp.Sub(packets[0].TimeStamp))
+		line := formatPacket(i+1, e, e.TimeStamp.Sub(packets[0].TimeStamp))
+		if i == selected {
+			line = selectedRowStyle.Render(line)
+		}
+		lines[i] = line
 	}
 	return strings.Join(lines, "\n")
 }
@@ -127,19 +144,59 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 
-		m.packetList.SetWidth(m.width)
-		m.packetList.SetHeight(m.mainPanelHeight() / 2)
+		l := m.layout()
 
-		m.detailView.SetWidth(m.width)
-		m.detailView.SetHeight(m.mainPanelHeight() / 2)
+		m.packetList.SetWidth(l.ContentWidth)
+		m.packetList.SetHeight(l.PacketsHeight)
+
+		m.detailView.SetWidth(l.ContentWidth)
+		m.detailView.SetHeight(l.DetailsHeight)
 
 		return m, nil
 
+	case tea.MouseWheelMsg:
+		if m.screenMode != Dashboard {
+			return m, nil
+		}
+
+		switch m.focus {
+		case PacketsFocus:
+			m.packetList, cmd = m.packetList.Update(msg)
+			return m, cmd
+		case DetailsFocus:
+			m.detailView, cmd = m.detailView.Update(msg)
+			return m, cmd
+		default:
+			return m, nil
+		}
+
+	case tea.MouseClickMsg:
+		if m.screenMode != Dashboard && msg.Button != tea.MouseLeft {
+			return m, nil
+		}
+
+		row := msg.Y - m.packetPanelTop()
+		if row < 0 || row >= m.packetList.Height() {
+			return m, nil
+		}
+
+		index := m.packetList.YOffset() + row
+		if index < len(m.packets) {
+			m.selected = index
+			m.packetList.SetContent(packetLines(m.packets, m.selected))
+			m.detailView.SetContent(formatDetail(m.packets[m.selected]))
+		}
+
+		return m, nil
+
+		// do here
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -153,6 +210,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screenMode = Interfaces
 			case "p":
 				m.paused = !m.paused
+			case "tab":
+				if m.focus == PacketsFocus {
+					m.focus = DetailsFocus
+				} else {
+					m.focus = PacketsFocus
+				}
+			default:
+				m.packetList, cmd = m.packetList.Update(msg)
+				return m, cmd
 			}
 		case Interfaces:
 			switch msg.String() {
@@ -181,7 +247,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		wasAtBottom := m.packetList.AtBottom()
-		m.packetList.SetContent(packetLines(m.packets))
+		m.packetList.SetContent(packetLines(m.packets, m.selected))
 		if wasAtBottom {
 			m.packetList.GotoBottom()
 		}

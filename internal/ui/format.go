@@ -2,13 +2,23 @@ package ui
 
 import (
 	"fmt"
+	lp "lazypacket"
 	"lazypacket/internal/layers"
+	"strings"
 	"time"
+
+	"charm.land/lipgloss/v2"
 )
 
 type Summarizer interface {
 	Summary() string
 }
+
+type Detailer interface {
+	Detail() string
+}
+
+var selectedRowStyle = lipgloss.NewStyle().Reverse(true)
 
 func formatPacket(i int, packet Entry, elapsed time.Duration) string {
 	ip, ok := packet.Packet.NetworkLayer().(*layers.IPv4)
@@ -24,4 +34,19 @@ func formatPacket(i int, packet Entry, elapsed time.Duration) string {
 	}
 
 	return fixed + " " + info
+}
+
+func formatDetail(e Entry) string {
+	var blocks []string
+	for _, l := range []lp.Layer{e.Packet.LinkLayer(), e.Packet.NetworkLayer(), e.Packet.TransportLayer()} {
+		if l == nil {
+			continue
+		}
+
+		if d, ok := l.(Detailer); ok {
+			blocks = append(blocks, d.Detail())
+		}
+	}
+
+	return strings.Join(blocks, "\n\n")
 }

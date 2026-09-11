@@ -6,6 +6,7 @@ import (
 	lp "lazypacket"
 	"net"
 	"strings"
+	"text/tabwriter"
 )
 
 type IPv4Flag uint8
@@ -149,4 +150,38 @@ func decodeIPv4Options(data []byte) (opts []IPv4Option, padding []byte, err erro
 		}
 	}
 	return opts, nil, nil
+}
+
+func (ip *IPv4) Detail() string {
+	var b strings.Builder
+	b.WriteString("Internet Protocol Version 4\n")
+
+	tw := tabwriter.NewWriter(&b, 0, 4, 1, ' ', 0)
+	_, _ = fmt.Fprintf(tw, "\tVersion\t%d\n", ip.Version)
+	_, _ = fmt.Fprintf(tw, "\tHeader Length\t%d bytes (IHL=%d)\n", ip.IHL*4, ip.IHL)
+	_, _ = fmt.Fprintf(tw, "\tType of Service\t0x%02x\n", ip.TOS)
+	_, _ = fmt.Fprintf(tw, "\tTotal Length\t%d\n", ip.Length)
+	_, _ = fmt.Fprintf(tw, "\tIdentification\t0x%04x\n", ip.Id)
+
+	flags := ip.Flags.String()
+	if flags == "" {
+		flags = "none"
+	}
+	_, _ = fmt.Fprintf(tw, "\tFlags\t0x%02x (%s)\n", uint8(ip.Flags), flags)
+	_, _ = fmt.Fprintf(tw, "\tFragment Offset\t%d\n", ip.FragOffset)
+	_, _ = fmt.Fprintf(tw, "\tTime to Live\t%d\n", ip.TTL)
+	_, _ = fmt.Fprintf(tw, "\tProtocol\t%s (%d)\n", ip.Protocol, uint8(ip.Protocol))
+	_, _ = fmt.Fprintf(tw, "\tHeader Checksum\t0x%04x\n", ip.Checksum)
+	_, _ = fmt.Fprintf(tw, "\tSource\t%s\n", ip.SrcAddr)
+	_, _ = fmt.Fprintf(tw, "\tDestination\t%s\n", ip.DstAddr)
+	_ = tw.Flush()
+
+	if len(ip.Options) > 0 {
+		b.WriteString("    Options\n")
+		for _, opt := range ip.Options {
+			b.WriteString("        " + opt.String() + "\n")
+		}
+	}
+
+	return strings.TrimRight(b.String(), "\n")
 }

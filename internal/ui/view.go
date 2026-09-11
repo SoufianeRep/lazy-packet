@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image/color"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,9 +10,48 @@ import (
 
 const (
 	headerHeight = 4
-	FooterHeight = 1
+	footerHeight = 1
 	borderSize   = 2
 )
+
+var (
+	focusedBorderColor = lipgloss.Color("#AD58B4")
+	dimBorderColor     = lipgloss.Color("#3C3C3C")
+)
+
+type Layout struct {
+	ContentWidth     int
+	HeaderHeight     int
+	PacketsHeight    int
+	DetailsHeight    int
+	FooterHeight     int
+	InterfacesHeight int
+}
+
+func (m Model) layout() Layout {
+	contentWidth := max(0, m.width-borderSize)
+
+	used := headerHeight + borderSize + footerHeight + borderSize
+	mainHeight := max(0, m.height-used)
+	packetsHeight := mainHeight / 2
+	detailsHeight := mainHeight - packetsHeight
+
+	return Layout{
+		ContentWidth:     contentWidth,
+		HeaderHeight:     headerHeight,
+		PacketsHeight:    packetsHeight,
+		DetailsHeight:    detailsHeight,
+		FooterHeight:     footerHeight,
+		InterfacesHeight: max(0, m.height-footerHeight-borderSize),
+	}
+}
+
+func (m Model) borderColor(panel FocusedPanel) color.Color {
+	if m.focus == panel {
+		return focusedBorderColor
+	}
+	return dimBorderColor
+}
 
 func (m Model) renderInterfaceList() string {
 	lines := make([]string, len(m.ifaces))
@@ -31,69 +71,76 @@ func (m Model) renderInterfaceList() string {
 	list := lipgloss.NewStyle().Align(lipgloss.Left).Render(strings.Join(lines, "\n"))
 	body = lipgloss.JoinVertical(lipgloss.Center, "Logo", list)
 
+	l := m.layout()
+
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		Width(m.width).
-		Height(m.height-FooterHeight-borderSize).
+		Width(l.ContentWidth).
+		Height(l.InterfacesHeight).
 		Align(lipgloss.Center, lipgloss.Center).
 		Render(body)
 }
 
 func (m Model) renderHeader() string {
+	l := m.layout()
+
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		Width(m.width).
-		Height(headerHeight).
+		Width(l.ContentWidth).
+		Height(l.HeaderHeight).
 		Render("Header Box")
 }
 
-func (m Model) mainPanelHeight() int {
-	header := m.renderHeader()
-	footer := m.renderCommandFooter()
-	return m.height - lipgloss.Height(header) - lipgloss.Height(footer) - borderSize
+func (m Model) packetPanelTop() int {
+	return m.layout().HeaderHeight + borderSize
 }
 
-func (m Model) renderMainPanel(height int) string {
+func (m Model) renderMainPanel() string {
+	l := m.layout()
+
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		Width(m.width).
-		Height(height).
+		BorderForeground(m.borderColor(PacketsFocus)).
+		Width(l.ContentWidth).
+		Height(l.PacketsHeight).
 		Render(m.packetList.View())
 }
 
-func (m Model) renderDetailsPanel(height int) string {
-	return lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).Height(height).Width(m.width).Render("Details Box")
+func (m Model) renderDetailsPanel() string {
+	l := m.layout()
+
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(m.borderColor(DetailsFocus)).
+		Width(l.ContentWidth).
+		Height(l.DetailsHeight).
+		Render(m.detailView.View())
 }
 
 func (m Model) renderCommandFooter() string {
+	l := m.layout()
+
 	return lipgloss.
 		NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		Width(m.width).
-		Height(FooterHeight).
+		Width(l.ContentWidth).
+		Height(l.FooterHeight).
 		Render("Footer Box")
 }
 
 func (m Model) View() tea.View {
-	header := m.renderHeader()
-	footer := m.renderCommandFooter()
-
-	var layout string
+	var content string
 	if m.screenMode == Interfaces {
-		layout = lipgloss.JoinVertical(lipgloss.Top, m.renderInterfaceList(), footer)
+		content = lipgloss.JoinVertical(lipgloss.Top, m.renderInterfaceList(), m.renderCommandFooter())
 	} else {
-		height := m.mainPanelHeight()
-
-		packetsPanel := m.renderMainPanel(height / 2)
-		detailsPanel := m.renderDetailsPanel(height / 2)
-
-		layout = lipgloss.JoinVertical(lipgloss.Top, header, packetsPanel, detailsPanel, footer)
+		content = lipgloss.JoinVertical(lipgloss.Top, m.renderHeader(), m.renderMainPanel(), m.renderDetailsPanel(), m.renderCommandFooter())
 	}
 
-	view := tea.NewView(layout)
+	view := tea.NewView(content)
 	view.AltScreen = true
+	view.MouseMode = tea.MouseModeCellMotion
 	return view
 }

@@ -3,7 +3,10 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
+	"strings"
+	"text/tabwriter"
 
 	lp "lazypacket"
 )
@@ -61,4 +64,20 @@ func (eth *Ethernet) DecodeFromBytes(data []byte, p lp.PacketBuilder) error {
 		// TODO: p.NextDecoder() with the correct decoder
 	}
 	return nil
+}
+
+func (eth *Ethernet) Detail() string {
+	var buf strings.Builder
+	buf.WriteString("Ethernet II\n")
+
+	tw := tabwriter.NewWriter(&buf, 0, 4, 1, ' ', 0)
+	_, _ = fmt.Fprintf(tw, "\tDestination\t%s\n", eth.DstMAC)
+	_, _ = fmt.Fprintf(tw, "\tSource\t%s\n", eth.SrcMAC)
+	if eth.VLAN != nil {
+		_, _ = fmt.Fprintf(tw, "\t802.1Q Tag\tVID=%d PCP=%d DEI=%t\n", eth.VLAN.VID, eth.VLAN.PCP, eth.VLAN.DEI)
+	}
+	_, _ = fmt.Fprintf(tw, "\tType\t%s\n", eth.EtherType)
+	_ = tw.Flush()
+
+	return buf.String()
 }

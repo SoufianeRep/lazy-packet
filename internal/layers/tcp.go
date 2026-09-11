@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	lp "lazypacket"
 )
@@ -188,10 +189,7 @@ OPTIONS:
 	return nil
 }
 
-func (t *TCP) Summary() string {
-	var summary strings.Builder
-	summary.WriteString(fmt.Sprintf("%d -> %d  ", t.SrcPort, t.DstPort))
-
+func (t *TCP) FlagNames() []string {
 	flags := make([]string, 0, 8)
 	if t.FIN {
 		flags = append(flags, "FIN")
@@ -225,6 +223,14 @@ func (t *TCP) Summary() string {
 		flags = append(flags, "CWR")
 	}
 
+	return flags
+}
+
+func (t *TCP) Summary() string {
+	var summary strings.Builder
+	summary.WriteString(fmt.Sprintf("%d -> %d  ", t.SrcPort, t.DstPort))
+
+	flags := t.FlagNames()
 	summary.WriteString(fmt.Sprintf("[%s] ", strings.Join(flags, ", ")))
 	summary.WriteString(fmt.Sprintf("Seq=%d ", t.SeqNum))
 	summary.WriteString(fmt.Sprintf("Ack=%d ", t.AckNum))
@@ -240,4 +246,61 @@ func (t *TCP) Summary() string {
 		}
 	}
 	return summary.String()
+}
+
+func (t *TCP) Detail() string {
+	var buf strings.Builder
+	buf.WriteString("Transmission Control Protocol\n")
+
+	tw := tabwriter.NewWriter(&buf, 0, 4, 1, ' ', 0)
+	_, _ = fmt.Fprintf(tw, "\tSource Port\t%s\n", t.SrcPort)
+	_, _ = fmt.Fprintf(tw, "\tDestination Port\t%s\n", t.DstPort)
+	_, _ = fmt.Fprintf(tw, "\tSequence Number\t%d\n", t.SeqNum)
+	_, _ = fmt.Fprintf(tw, "\tAcknowledgment Number\t%d\n", t.AckNum)
+	_, _ = fmt.Fprintf(tw, "\tHeader Length\t%d bytes (Offset=%d)\n", t.DataOffset*4, t.DataOffset)
+
+	var flagsByte uint8
+	if t.CWR {
+		flagsByte |= 0x80
+	}
+	if t.ECE {
+		flagsByte |= 0x40
+	}
+	if t.URG {
+		flagsByte |= 0x20
+	}
+	if t.ACK {
+		flagsByte |= 0x10
+	}
+	if t.PSH {
+		flagsByte |= 0x08
+	}
+	if t.RST {
+		flagsByte |= 0x04
+	}
+	if t.SYN {
+		flagsByte |= 0x02
+	}
+	if t.FIN {
+		flagsByte |= 0x01
+	}
+	flagsStr := "none"
+	if names := t.FlagNames(); len(names) > 0 {
+		flagsStr = strings.Join(names, ", ")
+	}
+	_, _ = fmt.Fprintf(tw, "\tFlags\t0x%03x (%s)\n", flagsByte, flagsStr)
+
+	_, _ = fmt.Fprintf(tw, "\tWindow\t%d\n", t.Window)
+	_, _ = fmt.Fprintf(tw, "\tChecksum\t0x%04x\n", t.Checksum)
+	_, _ = fmt.Fprintf(tw, "\tUrgent Pointer\t%d\n", t.UrgentPointer)
+	_ = tw.Flush()
+
+	if len(t.Options) > 0 {
+		buf.WriteString("\tOptions\n")
+		for _, opt := range t.Options {
+			buf.WriteString(fmt.Sprintf("\t\t%s\n", opt.OptionType))
+		}
+	}
+
+	return strings.TrimRight(buf.String(), "\n")
 }
