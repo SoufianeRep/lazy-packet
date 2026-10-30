@@ -10,7 +10,7 @@ import (
 
 const (
 	headerHeight = 4
-	footerHeight = 1
+	footerHeight = 3
 	borderSize   = 2
 )
 
@@ -29,9 +29,9 @@ type Layout struct {
 }
 
 func (m Model) layout() Layout {
-	contentWidth := max(0, m.width-borderSize)
+	contentWidth := m.width
 
-	used := headerHeight + borderSize + footerHeight + borderSize
+	used := headerHeight + footerHeight
 	mainHeight := max(0, m.height-used)
 	packetsHeight := mainHeight / 2
 	detailsHeight := mainHeight - packetsHeight
@@ -42,7 +42,7 @@ func (m Model) layout() Layout {
 		PacketsHeight:    packetsHeight,
 		DetailsHeight:    detailsHeight,
 		FooterHeight:     footerHeight,
-		InterfacesHeight: max(0, m.height-footerHeight-borderSize),
+		InterfacesHeight: max(0, m.height-footerHeight),
 	}
 }
 
@@ -94,7 +94,7 @@ func (m Model) renderHeader() string {
 }
 
 func (m Model) packetPanelTop() int {
-	return m.layout().HeaderHeight + borderSize
+	return m.layout().HeaderHeight + 1
 }
 
 func (m Model) renderMainPanel() string {

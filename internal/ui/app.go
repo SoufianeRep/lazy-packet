@@ -153,11 +153,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		l := m.layout()
 
-		m.packetList.SetWidth(l.ContentWidth)
-		m.packetList.SetHeight(l.PacketsHeight)
+		m.packetList.SetWidth(max(0, l.ContentWidth-borderSize))
+		m.packetList.SetHeight(max(0, l.PacketsHeight-borderSize))
 
-		m.detailView.SetWidth(l.ContentWidth)
-		m.detailView.SetHeight(l.DetailsHeight)
+		m.detailView.SetWidth(max(0, l.ContentWidth-borderSize))
+		m.detailView.SetHeight(max(0, l.DetailsHeight-borderSize))
 
 		return m, nil
 
